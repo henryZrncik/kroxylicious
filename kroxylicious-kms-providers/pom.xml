@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.kroxylicious</groupId>
         <artifactId>kroxylicious-parent</artifactId>
-        <version>0.21.0-SNAPSHOT</version>
+        <version>0.22.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>kroxylicious-kms-providers</artifactId>
@@ -58,6 +58,7 @@
                                     <includes combine.children="append">
                                         <include>io.kroxylicious:kroxylicious-kms</include>
                                         <include>io.kroxylicious:kroxylicious-kms-test-support:test</include>
+                                        <include>io.kroxylicious:kroxylicious-certificate-test-support:test</include>
                                         <include>io.kroxylicious:kroxylicious-kms-tls-support</include>
                                         <include>io.kroxylicious:kroxylicious-api</include>
                                         <include>io.kroxylicious:kroxylicious-annotations</include>

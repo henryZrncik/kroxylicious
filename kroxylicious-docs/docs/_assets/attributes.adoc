@@ -28,7 +28,7 @@
 :icons: font
 
 // Latest version
-:KroxyliciousVersion: 0.21.0-SNAPSHOT
+:KroxyliciousVersion: 0.22.0-SNAPSHOT
 // Used for links to release artifacts, will be 404 during development
 :KroxyliciousReleaseTag: v{KroxyliciousVersion}
 // Used to point at source code and blobs, will point at main during development and at the release tag when deployed
@@ -40,6 +40,9 @@
 
 :AppAssetArtifactBase: kroxylicious-app-{KroxyliciousVersion}
 :OperatorAssetZipFileName: kroxylicious-operator-{KroxyliciousVersion}.zip
+// TODO: Update when the admission webhook release artifact names are finalized
+:WebhookAssetZipFileName: kroxylicious-webhook-{KroxyliciousVersion}.zip
+:WebhookAssetTgzFileName: kroxylicious-webhook-{KroxyliciousVersion}.tar.gz
 :AppAssetZipFileName: {AppAssetArtifactBase}-bin.zip
 :OperatorAssetTgzFileName: kroxylicious-operator-{KroxyliciousVersion}.tar.gz
 :AppAssetTgzFileName: {AppAssetArtifactBase}-bin.tar.gz
@@ -153,6 +156,10 @@ ifndef::DocRoot[:DocRoot: ..]
 :OperatorGuideUrl: {DocRoot}/kroxylicious-operator/
 :OperatorGuideText: Kroxylicious Operator for Kubernetes guide
 :OperatorGuide: link:{OperatorGuideUrl}[{OperatorGuideText}]
+
+:AdmissionWebhookGuideUrl: {DocRoot}/admission-webhook-guide/
+:AdmissionWebhookGuideText: Kroxylicious Admission Webhook guide
+:AdmissionWebhookGuide: link:{AdmissionWebhookGuideUrl}[{AdmissionWebhookGuideText}]
 
 //Filter guides
 :AuthorizationGuideUrl: {DocRoot}/authorization-guide/

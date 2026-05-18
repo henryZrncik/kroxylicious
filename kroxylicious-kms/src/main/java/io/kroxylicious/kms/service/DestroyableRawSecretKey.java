@@ -10,12 +10,13 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 
-import javax.annotation.concurrent.NotThreadSafe;
 import javax.crypto.SecretKey;
 import javax.security.auth.DestroyFailedException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.kroxylicious.proxy.tag.NotThreadSafe;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 
@@ -120,7 +121,7 @@ public final class DestroyableRawSecretKey implements SecretKey {
         return key.clone();
     }
 
-    static void checkNotDestroyed(SecretKey key) {
+    public static void checkNotDestroyed(SecretKey key) {
         if (key.isDestroyed()) {
             throw new IllegalStateException("Key has been destroyed");
         }

@@ -6,7 +6,24 @@ For changes that effect a public API, the [deprecation policy](./DEV_GUIDE.md#de
 Format `<github issue/pr number>: <short description>`.
 
 ## SNAPSHOT
+## 0.21.0
 
+* [#3860](https://github.com/kroxylicious/kroxylicious/pull/3860): perf(operator): reduce memory usage by sharing Secret and ConfigMap informer caches across reconcilers (78% reduction in informer caches)
+* [#3918](https://github.com/kroxylicious/kroxylicious/pull/3918): feat(admission): alpha release of Kubernetes admission webhook for automatic sidecar injection. Enables transparent Kafka protocol proxying without application code changes via the `KroxySidecarConfig` CRD
+* [#3803](https://github.com/kroxylicious/kroxylicious/pull/3803): fix(operator): remove incorrect 'routes' resource from default API group ClusterRole
+* [#3218](https://github.com/kroxylicious/kroxylicious/pull/3218): feat(tls): add plugin API for selecting TLS client credentials for upstream connections. Introduces `ServerTlsCredentialSupplier` service interface for dynamic TLS credential selection
+* [#3738](https://github.com/kroxylicious/kroxylicious/pull/3738): feat(runtime): add graceful connection draining for virtual cluster shutdown with configurable per-cluster `drainTimeout` and new disconnect metrics
+* [#3662](https://github.com/kroxylicious/kroxylicious/pull/3662): feat(logging): support configurable JSON logging template via `KROXYLICIOUS_LOG_JSON_TEMPLATE` environment variable
+* [#3546](https://github.com/kroxylicious/kroxylicious/pull/3546): feat(runtime): add HAProxy PROXY protocol support for TLS connections via `ProxyProtocolConfig` configuration
+* refactor: move `kroxylicious-kms-tls-support` to `io.kroxylicious.testing.kms.tls`
+* [#3861](https://github.com/kroxylicious/kroxylicious/pull/3861): refactor: move test-support modules to `io.kroxylicious.testing`
+* [#3882](https://github.com/kroxylicious/kroxylicious/pull/3882): build(image): proxy container image renamed from `quay.io/kroxylicious/kroxylicious` to `quay.io/kroxylicious/proxy`
+* [#3236](https://github.com/kroxylicious/kroxylicious/issues/3236): build(deps): bump strimzi.version from 0.51.0 to 1.0.0
+* [#3824](https://github.com/kroxylicious/kroxylicious/pull/3824): refactor(archetype): reuse record batch transform module
+* [#3842](https://github.com/kroxylicious/kroxylicious/pull/3842): fix(operator): use precise Kafka CRD detection for Strimzi support (prerequisite for Strimzi v1 upgrade)
+* [#2820](https://github.com/kroxylicious/kroxylicious/issues/2820): feat(operator): add automatic TLS trust discovery for Strimzi-managed Kafka clusters via `trustStrimziCaCertificate` field in KafkaService
+* [#3498](https://github.com/kroxylicious/kroxylicious/pull/3498): feat(record-validation): add Avro and Protobuf schema validation support
+* [#3760](https://github.com/kroxylicious/kroxylicious/issues/3760): fix: remove unknown apis in Authorization & EntityIsolation Filters
 * [#3769](https://github.com/kroxylicious/kroxylicious/pull/3769): fix(runtime): messages enter Filter chain before Transport Subject built
 * [#3757](https://github.com/kroxylicious/kroxylicious/issues/3757): fix(runtime): trigger read after HAProxy message to prevent deadlock when autoread disabled
 * [#1295](https://github.com/kroxylicious/kroxylicious/issues/1295): feat(aws-kms): add IRSA and EKS Pod Identity credential providers, and restructure AWS KMS credential configuration under a new `credentials` node (see [note](#note-021-aws-kms-credentials-restructure))
@@ -19,9 +36,19 @@ Format `<github issue/pr number>: <short description>`.
 
 ### Changes, deprecations and removals
 
+* [#3918](https://github.com/kroxylicious/kroxylicious/pull/3918): **Alpha release** - The Kubernetes admission webhook for sidecar injection is an alpha feature. New modules: `kroxylicious-admission-api` (CRD definitions), `kroxylicious-admission` (webhook server), and `kroxylicious-admission-dist` (installation manifests). Container image: `quay.io/kroxylicious/webhook`. See the admission webhook guide in the documentation for installation and usage.
+* [#3218](https://github.com/kroxylicious/kroxylicious/pull/3218): **New public API** - `ServerTlsCredentialSupplier` and `ServerTlsCredentialSupplierFactory` interfaces added to `kroxylicious-api` module for dynamic TLS credential selection. Configure via `targetCluster.tls.tlsCredentialSupplier` with your custom implementation. The supplier can select credentials based on the target broker's address, enabling multi-tenant or multi-cluster deployments with different upstream certificates.
+* [#3738](https://github.com/kroxylicious/kroxylicious/pull/3738): Virtual clusters now support graceful connection draining during shutdown via the optional `drainTimeout` configuration property (Go-style duration format). When set, the proxy stops accepting new connections and waits up to `drainTimeout` for in-flight requests to complete before forcing shutdown. New metrics: `kroxylicious_client_to_proxy_disconnects_total` now includes `cause` labels `drain_completed` and `drain_timeout` to distinguish graceful vs forced disconnections during shutdown.
+* [#3662](https://github.com/kroxylicious/kroxylicious/pull/3662): JSON logging template is now configurable via the `KROXYLICIOUS_LOG_JSON_TEMPLATE` environment variable. Set this to a file path containing a custom Log4j2 JSON template layout to override the default structured logging format.
+* [#3546](https://github.com/kroxylicious/kroxylicious/pull/3546): HAProxy PROXY protocol support is now available for TLS connections. Configure via `proxy.proxyProtocol.mode` with values `disabled` (default) or `enabled`. When enabled, the proxy expects the PROXY protocol header before the TLS handshake, enabling deployment behind HAProxy or other load balancers that preserve client connection information.
+* [#3882](https://github.com/kroxylicious/kroxylicious/pull/3882): The primary proxy container image is now `quay.io/kroxylicious/proxy`. `quay.io/kroxylicious/kroxylicious` is deprecated and subject to removal following our deprecation policy. Users deploying the proxy image directly (without the operator) should update their deployment configurations to use the new image name. The operator will automatically use the new image name.
+* The `kroxylicious-kms-tls-support` module now uses the package `io.kroxylicious.testing.kms.tls` (was `io.kroxylicious.proxy.tls`). 3rd party KMS providers that depend on this module will need to update their imports.
+* [#3861](https://github.com/kroxylicious/kroxylicious/pull/3861): The `kroxylicious-*-test-support` modules now consistently use the package prefix `io.kroxylicious.testing`. Many of these modules modules are effectively internal, but 3rd party filters may have a dependency on `kroxylicious-filter-test-support` and 3rd party KMSes may have a dependency on `kroxylicious-kms-test-support`. When upgrading you will need to use the new package name in your tests.
+* [#3236](https://github.com/kroxylicious/kroxylicious/issues/3236): **BREAKING CHANGE** - If making use of the Strimzi integration feature in the KafkaService CR (`spec.strimziKafkaRef`), Strimzi 0.49.0 or later is now **required**. The Kroxylicious Operator now uses the Strimzi Kafka CR v1 API exclusively; v1beta2 API support has been dropped. Users running Strimzi versions prior to 0.49.0 must upgrade Strimzi.
 * [#3786](https://github.com/kroxylicious/kroxylicious/issues/3786): The deprecated method `StatusFactory#newTrueConditionStatusPatch(CustomResource, Condition.Type)` (two-parameter form) is removed. Use `StatusFactory#newTrueConditionStatusPatch(CustomResource, Condition.Type, String)` instead, passing `MetadataChecksumGenerator.NO_CHECKSUM_SPECIFIED` if no checksum tracking is needed.
 * The deprecated method `FilterContext#clientSaslAuthenticationSuccess(String, String)` is removed. Filter authors must use `FilterContext#clientSaslAuthenticationSuccess(String, Subject)` to announce a successful SASL authentication to the other filters in the chain.
 * [#1295](https://github.com/kroxylicious/kroxylicious/issues/1295): The AWS KMS top-level `longTermCredentials` and `ec2MetadataCredentials` YAML keys are deprecated.  Use the new `credentials.longTerm` and `credentials.ec2Metadata` forms under the grouped `credentials` node instead.  The old keys continue to work for backward compatibility.
+* [#3824](https://github.com/kroxylicious/kroxylicious/pull/3824): `kroxylicious-filter-archetype` has been refactored to reuse the record batch transform module from `kroxylicious-kafka-message-tools`. It is recommended for filter authors to use this approach when transforming records.
 
 #### Note 0.21 AWS KMS credentials restructure
 

@@ -16,7 +16,7 @@
     <parent>
         <groupId>io.kroxylicious</groupId>
         <artifactId>kroxylicious-parent</artifactId>
-        <version>0.21.0-SNAPSHOT</version>
+        <version>0.22.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>kroxylicious-integration-test-support</artifactId>
@@ -268,7 +268,7 @@
                             <templateNames>BodyDecoder.ftl</templateNames>
                             <!--suppress UnresolvedMavenProperty -->
                             <outputFilePattern>${templateName}.java</outputFilePattern>
-                            <outputPackage>io.kroxylicious.test.codec</outputPackage>
+                            <outputPackage>io.kroxylicious.testing.integration.codec</outputPackage>
                             <outputDirectory>${project.build.directory}/generated-sources/krpc</outputDirectory>
                         </configuration>
                     </execution>
@@ -286,7 +286,7 @@
                             <templateNames>DataClasses.ftl</templateNames>
                             <!--suppress UnresolvedMavenProperty -->
                             <outputFilePattern>${templateName}.java</outputFilePattern>
-                            <outputPackage>io.kroxylicious.test</outputPackage>
+                            <outputPackage>io.kroxylicious.testing.integration</outputPackage>
                             <outputDirectory>${project.build.directory}/generated-sources/krpc</outputDirectory>
                         </configuration>
                     </execution>
