@@ -83,7 +83,7 @@ public class LocalStack implements AwsKmsClient {
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         Awaitility.await()
-                .atMost(30, TimeUnit.SECONDS)
+                .atMost(390, TimeUnit.SECONDS)
                 .ignoreExceptions()
                 .until(() -> {
                     LOGGER.info("Probing localstack endpoint for responsiveness.");
