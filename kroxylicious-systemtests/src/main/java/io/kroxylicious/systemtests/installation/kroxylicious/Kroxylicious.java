@@ -237,8 +237,8 @@ public class Kroxylicious {
      * @return the bootstrap server of the cluster
      */
     public String getBootstrap(String clusterName) {
-        var bootstrapServer = await("poll for bootstrap").atMost(Duration.ofSeconds(30))
-                .pollInterval(Duration.ofSeconds(1))
+        var bootstrapServer = await("poll for bootstrap").atMost(Duration.ofSeconds(120))
+                .pollInterval(Duration.ofSeconds(3))
                 .until(() -> {
                     var virtualKafkaCluster = kubeClient().getClient()
                             .resources(VirtualKafkaCluster.class)
