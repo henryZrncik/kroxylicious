@@ -7,7 +7,21 @@
 # Helm Overrides File for localstack used by the system tests.
 image:
   tag: 4.14.0@sha256:3ebc37595918b8accb852f8048fef2aff047d465167edd655528065b07bc364a
-enableStartupScripts: true
-startupScriptContent: |
-  #!/bin/bash
-  awslocal configure set region us-east-2
+
+# Set region via environment variable instead of startup script
+# (avoids need to write to /.aws directory in restricted pod security)
+extraEnvVars:
+  - name: AWS_DEFAULT_REGION
+    value: us-east-2
+
+# Volumes and mounts for writable directories (required for restricted pod security)
+volumes:
+  - name: cache
+    emptyDir: {}
+  - name: tmp
+    emptyDir: {}
+volumeMounts:
+  - name: cache
+    mountPath: /.cache
+  - name: tmp
+    mountPath: /tmp
