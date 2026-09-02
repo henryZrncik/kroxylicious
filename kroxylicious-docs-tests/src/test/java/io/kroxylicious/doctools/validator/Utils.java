@@ -30,7 +30,6 @@ public class Utils {
 
     // Container-image tarballs produced by `mvn -Pdist package` on the proxy and operator modules.
     // QuickStartDT loads these into the throw-away Minikube profile it creates for each quick start run
-    // (issue #4404: the quick start runs against its own profile, so the images have to be loaded there).
     static final Path PROXY_IMAGE_TARBALL = MODULE_ROOT.getParent().resolve("kroxylicious-app/target/kroxylicious-proxy.img.tar.gz");
     static final Path OPERATOR_IMAGE_TARBALL = MODULE_ROOT.getParent().resolve("kroxylicious-kubernetes/kroxylicious-operator/target/kroxylicious-operator.img.tar.gz");
 
