@@ -21,6 +21,12 @@ on:
     branches: [ main, 'release/**' ]
   pull_request:
     types: [ opened, synchronize, reopened ]
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: "Hold the runner open for an SSH (upterm) session before running the doc tests"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -93,6 +99,19 @@ jobs:
             -o /tmp/strimzi-manifest/kafka-single-node.yaml \
             --create-dirs \
             "https://raw.githubusercontent.com/strimzi/strimzi-kafka-operator/refs/tags/${STRIMZI_VERSION}/examples/kafka/kafka-single-node.yaml"
+      # Manual `workflow_dispatch` with debug_enabled=true only. Holds the runner open for an
+      # interactive SSH (upterm) session *before* the doc tests run, so a maintainer can drive
+      # `minikube` / the Maven build by hand (e.g. to diagnose image-load failures).
+      # limit-access-to-actor: true restricts the session to the dispatcher's GitHub SSH keys —
+      # do NOT set it to false: this job has GITHUB_TOKEN / Slack secrets in its environment and
+      # the connection string is printed to the (public) run log.
+      # TODO: pin owenthereal/action-upterm to a commit SHA before merge (repo convention).
+      - name: 'Interactive debug (upterm)'
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        uses: owenthereal/action-upterm@v1
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true
       - name: 'Run documentation tests'
         env:
           STRIMZI_MANIFEST: /tmp/strimzi-manifest/kafka-single-node.yaml
