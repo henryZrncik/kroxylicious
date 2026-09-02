@@ -21,6 +21,7 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -80,8 +81,17 @@ class QuickStartDT {
         var profile = "quickstart-" + ThreadLocalRandom.current().nextInt(100_000);
         try {
             ShellUtils.exec("minikube", "start", "-p", profile);
-            ShellUtils.exec("minikube", "image", "load", "-p", profile, Utils.PROXY_IMAGE_TARBALL.toString());
-            ShellUtils.exec("minikube", "image", "load", "-p", profile, Utils.OPERATOR_IMAGE_TARBALL.toString());
+            loadImage(profile, Utils.PROXY_IMAGE_TARBALL, "kroxylicious/proxy");
+            loadImage(profile, Utils.OPERATOR_IMAGE_TARBALL, "kroxylicious/operator");
+
+            // Check 2: the quick start's kubectl commands follow the *active* context, not MINIKUBE_PROFILE.
+            // If it is not our profile, the operator lands in a cluster without the images.
+            boolean contextOk = ShellUtils.execValidate(lines -> lines.anyMatch(l -> l.trim().equals(profile)), lines -> true,
+                    "kubectl", "config", "current-context");
+            if (!contextOk) {
+                throw new AssertionError("active kube-context is not '" + profile + "' before running the quick start (issue #4404)");
+            }
+            LOGGER.atInfo().addKeyValue("profile", profile).log("Quick start: kube-context confirmed, running shell script");
 
             var actual = executeScript(writeShellScript(shellBlocks), profile);
             try {
@@ -106,6 +116,26 @@ class QuickStartDT {
                 LOGGER.atWarn().addKeyValue("profile", profile).setCause(e).log("Minikube profile cleanup failed");
             }
         }
+    }
+
+    /**
+     * Loads a container-image tarball into {@code profile}, then verifies it is really there.
+     * {@code minikube image load} exits 0 even when the load failed (kubernetes/minikube#23471), so
+     * {@code minikube image ls} is checked for {@code expectedRepo} (e.g. {@code kroxylicious/operator})
+     * — per component, so a successfully loaded proxy image cannot mask a failed operator load.
+     */
+    private static void loadImage(String profile, Path tarball, String expectedRepo) {
+        ShellUtils.exec("minikube", "image", "load", "-p", profile, tarball.toString());
+        var matches = new ArrayList<String>();
+        ShellUtils.execValidate(lines -> {
+            lines.filter(l -> l.contains(expectedRepo)).map(String::trim).forEach(matches::add);
+            return true;
+        }, lines -> true, "minikube", "image", "ls", "-p", profile);
+        if (matches.isEmpty()) {
+            throw new AssertionError("%s not in Minikube profile '%s' after `minikube image load` (kubernetes/minikube#23471)"
+                    .formatted(tarball.getFileName(), profile));
+        }
+        LOGGER.atInfo().addKeyValue("profile", profile).addKeyValue("images", matches).log("Image loaded into Minikube profile");
     }
 
     private static String pathToFileUrl(Path path) {
