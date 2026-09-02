@@ -80,8 +80,17 @@ class QuickStartDT {
         var profile = "quickstart-" + ThreadLocalRandom.current().nextInt(100_000);
         try {
             ShellUtils.exec("minikube", "start", "-p", profile);
-            ShellUtils.exec("minikube", "image", "load", "-p", profile, Utils.PROXY_IMAGE_TARBALL.toString());
-            ShellUtils.exec("minikube", "image", "load", "-p", profile, Utils.OPERATOR_IMAGE_TARBALL.toString());
+            loadImage(profile, Utils.PROXY_IMAGE_TARBALL, "kroxylicious/proxy");
+            loadImage(profile, Utils.OPERATOR_IMAGE_TARBALL, "kroxylicious/operator");
+
+            // Check 2: the quick start's kubectl commands follow the *active* context, not MINIKUBE_PROFILE.
+            // If it is not our profile, the operator lands in a cluster without the images.
+            boolean contextOk = ShellUtils.execValidate(lines -> lines.anyMatch(l -> l.trim().equals(profile)), lines -> true,
+                    "kubectl", "config", "current-context");
+            if (!contextOk) {
+                throw new AssertionError("active kube-context is not '" + profile + "' before running the quick start (issue #4404)");
+            }
+            LOGGER.atInfo().addKeyValue("profile", profile).log("Quick start: kube-context confirmed, running shell script");
 
             var actual = executeScript(writeShellScript(shellBlocks), profile);
             try {
@@ -106,6 +115,16 @@ class QuickStartDT {
                 LOGGER.atWarn().addKeyValue("profile", profile).setCause(e).log("Minikube profile cleanup failed");
             }
         }
+    }
+
+    /**
+     * Loads a container-image tarball into {@code profile}. Delegates to {@code scripts/minikube-image-load.sh},
+     * which fails (unlike a bare {@code minikube image load} — kubernetes/minikube#23471) if the load errored
+     * or if {@code expectedRepo} (e.g. {@code kroxylicious/operator}) is not listed afterwards.
+     */
+    private static void loadImage(String profile, Path tarball, String expectedRepo) {
+        ShellUtils.exec(Utils.SCRIPTS_DIR.resolve("minikube-image-load.sh").toString(), profile, tarball.toString(), expectedRepo);
+        LOGGER.atInfo().addKeyValue("profile", profile).addKeyValue("image", expectedRepo).log("Image loaded into Minikube profile");
     }
 
     private static String pathToFileUrl(Path path) {
