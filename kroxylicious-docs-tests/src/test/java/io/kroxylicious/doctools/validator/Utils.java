@@ -28,6 +28,12 @@ public class Utils {
     // from the kroxylicious-operator-dist module to this module with a stable name.
     static final Path OPERATOR_ZIP = MODULE_ROOT.resolve("target").resolve("kroxylicious-operator-dist").resolve("kroxylicious-operator.zip");
 
+    // Container-image tarballs produced by `mvn -Pdist package` on the proxy and operator modules.
+    // QuickStartDT loads these into the throw-away Minikube profile it creates for each quick start run
+    // (issue #4404: the quick start runs against its own profile, so the images have to be loaded there).
+    static final Path PROXY_IMAGE_TARBALL = MODULE_ROOT.getParent().resolve("kroxylicious-app/target/kroxylicious-proxy.img.tar.gz");
+    static final Path OPERATOR_IMAGE_TARBALL = MODULE_ROOT.getParent().resolve("kroxylicious-kubernetes/kroxylicious-operator/target/kroxylicious-operator.img.tar.gz");
+
     static Stream<Path> asciiDocFilesMatching(final Predicate<Path> pathPredicate) {
 
         try {

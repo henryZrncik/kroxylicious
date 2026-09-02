@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 import org.asciidoctor.Attributes;
@@ -57,6 +58,8 @@ class QuickStartDT {
 
     private static List<Arguments> quickStarts() {
         Assertions.assertThat(Utils.OPERATOR_ZIP).exists();
+        Assertions.assertThat(Utils.PROXY_IMAGE_TARBALL).exists();
+        Assertions.assertThat(Utils.OPERATOR_IMAGE_TARBALL).exists();
 
         var attributes = Attributes.builder()
                 .attribute("OperatorAssetZipLink", pathToFileUrl(Utils.OPERATOR_ZIP))
@@ -71,23 +74,36 @@ class QuickStartDT {
     @ParameterizedTest
     @MethodSource("quickStarts")
     void quickStart(List<Block> shellBlocks) {
-        // Given
-        Path shellScript = writeShellScript(shellBlocks);
-
-        // When
-        var actual = executeScript(shellScript);
-
-        // Then
+        // One throw-away Minikube profile per @ParameterizedTest invocation (i.e. per KMS variant),
+        // seeded with the locally built images. The quick start's
+        // `export MINIKUBE_PROFILE=${MINIKUBE_PROFILE:-quickstart-${RANDOM}}` line reuses this value.
+        var profile = "quickstart-" + ThreadLocalRandom.current().nextInt(100_000);
         try {
-            assertThat(actual)
-                    .succeedsWithin(Duration.ofMinutes(10))
-                    .satisfies(er -> assertThat(er.exitValue())
-                            .withFailMessage("Script failed - %s", er)
-                            .isZero());
+            ShellUtils.exec("minikube", "start", "-p", profile);
+            ShellUtils.exec("minikube", "image", "load", "-p", profile, Utils.PROXY_IMAGE_TARBALL.toString());
+            ShellUtils.exec("minikube", "image", "load", "-p", profile, Utils.OPERATOR_IMAGE_TARBALL.toString());
+
+            var actual = executeScript(writeShellScript(shellBlocks), profile);
+            try {
+                assertThat(actual)
+                        .succeedsWithin(Duration.ofMinutes(10))
+                        .satisfies(er -> assertThat(er.exitValue())
+                                .withFailMessage("Script failed - %s", er)
+                                .isZero());
+            }
+            finally {
+                if (!actual.isDone()) {
+                    actual.cancel(true);
+                }
+            }
         }
         finally {
-            if (!actual.isDone()) {
-                actual.cancel(true);
+            try {
+                ShellUtils.exec("minikube", "delete", "-p", profile);
+            }
+            catch (RuntimeException | AssertionError e) {
+                // The quick start's own "minikube delete" cleanup step may already have removed it.
+                LOGGER.atWarn().addKeyValue("profile", profile).setCause(e).log("Minikube profile cleanup failed");
             }
         }
     }
@@ -122,9 +138,10 @@ class QuickStartDT {
                 Objects.equals(sn.getAttribute("language", null), "terminal");
     }
 
-    private CompletableFuture<ExecutionResult> executeScript(Path shellScript) {
+    private CompletableFuture<ExecutionResult> executeScript(Path shellScript, String minikubeProfile) {
         return CompletableFuture.supplyAsync(() -> {
             var builder = new ProcessBuilder(shellScript.toAbsolutePath().toString());
+            builder.environment().put("MINIKUBE_PROFILE", minikubeProfile);
 
             try (var stdoutExecutor = Executors.newSingleThreadExecutor();
                     var stderrExecutor = Executors.newSingleThreadExecutor()) {

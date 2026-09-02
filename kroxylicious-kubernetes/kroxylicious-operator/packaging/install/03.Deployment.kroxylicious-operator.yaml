@@ -32,7 +32,7 @@ spec:
       containers:
         - name: operator
           image: $[io.kroxylicious.operator.image.name]
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
