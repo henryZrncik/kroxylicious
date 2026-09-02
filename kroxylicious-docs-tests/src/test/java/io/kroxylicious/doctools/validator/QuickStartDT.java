@@ -21,7 +21,6 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -119,23 +118,13 @@ class QuickStartDT {
     }
 
     /**
-     * Loads a container-image tarball into {@code profile}, then verifies it is really there.
-     * {@code minikube image load} exits 0 even when the load failed (kubernetes/minikube#23471), so
-     * {@code minikube image ls} is checked for {@code expectedRepo} (e.g. {@code kroxylicious/operator})
-     * — per component, so a successfully loaded proxy image cannot mask a failed operator load.
+     * Loads a container-image tarball into {@code profile}. Delegates to {@code scripts/minikube-image-load.sh},
+     * which fails (unlike a bare {@code minikube image load} — kubernetes/minikube#23471) if the load errored
+     * or if {@code expectedRepo} (e.g. {@code kroxylicious/operator}) is not listed afterwards.
      */
     private static void loadImage(String profile, Path tarball, String expectedRepo) {
-        ShellUtils.exec("minikube", "image", "load", "-p", profile, tarball.toString());
-        var matches = new ArrayList<String>();
-        ShellUtils.execValidate(lines -> {
-            lines.filter(l -> l.contains(expectedRepo)).map(String::trim).forEach(matches::add);
-            return true;
-        }, lines -> true, "minikube", "image", "ls", "-p", profile);
-        if (matches.isEmpty()) {
-            throw new AssertionError("%s not in Minikube profile '%s' after `minikube image load` (kubernetes/minikube#23471)"
-                    .formatted(tarball.getFileName(), profile));
-        }
-        LOGGER.atInfo().addKeyValue("profile", profile).addKeyValue("images", matches).log("Image loaded into Minikube profile");
+        ShellUtils.exec(Utils.SCRIPTS_DIR.resolve("minikube-image-load.sh").toString(), profile, tarball.toString(), expectedRepo);
+        LOGGER.atInfo().addKeyValue("profile", profile).addKeyValue("image", expectedRepo).log("Image loaded into Minikube profile");
     }
 
     private static String pathToFileUrl(Path path) {
