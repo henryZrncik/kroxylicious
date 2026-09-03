@@ -12,18 +12,64 @@
 #   1. fails up front if the tarball does not exist;
 #   2. after the load, fails unless `minikube image ls` lists <expected-repo> (e.g. kroxylicious/operator).
 #
-# Usage: minikube-image-load.sh <profile> <tarball> <expected-repo>
+# Usage: minikube-image-load.sh [--profile|-p <profile>] <tarball> <expected-repo>
+#
+# If --profile/-p is omitted, Minikube's own current profile is used (i.e. the -p flag is
+# not passed to the underlying `minikube` subcommands).
 
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "usage: $0 <profile> <tarball> <expected-repo>" >&2
+usage() {
+  echo "usage: $0 [--profile|-p <profile>] <tarball> <expected-repo>" >&2
+}
+
+profile=""
+positional=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -p | --profile)
+      if [[ $# -lt 2 ]]; then
+        echo "minikube-image-load: $1 requires an argument" >&2
+        usage
+        exit 2
+      fi
+      profile=$2
+      shift 2
+      ;;
+    --)
+      shift
+      positional+=("$@")
+      break
+      ;;
+    -*)
+      echo "minikube-image-load: unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      positional+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ${#positional[@]} -ne 2 ]]; then
+  usage
   exit 2
 fi
 
-profile=$1
-tarball=$2
-expected_repo=$3
+tarball=${positional[0]}
+expected_repo=${positional[1]}
+
+# When no profile is supplied, omit -p entirely so the minikube subcommands act on
+# Minikube's own current profile. profile_desc is only used for messages.
+profile_args=()
+profile_desc="the current Minikube profile"
+if [[ -n "${profile}" ]]; then
+  profile_args=(-p "${profile}")
+  profile_desc="profile '${profile}'"
+fi
 
 # Check that the tarball exists before attempting to load it
 if [[ ! -f "${tarball}" ]]; then
@@ -31,14 +77,14 @@ if [[ ! -f "${tarball}" ]]; then
   exit 1
 fi
 
-# Load the image into the specified Minikube profile
-minikube image load -p "${profile}" "${tarball}"
+# Load the image into the target Minikube profile
+minikube image load "${profile_args[@]}" "${tarball}"
 
 # Verify that the expected repository is now listed in the profile's images
-if ! minikube image ls -p "${profile}" | grep -qF "${expected_repo}"; then
-  echo "minikube-image-load: ${expected_repo} is not in profile '${profile}' after loading ${tarball} (kubernetes/minikube#23471)" >&2
+if ! minikube image ls "${profile_args[@]}" | grep -qF "${expected_repo}"; then
+  echo "minikube-image-load: ${expected_repo} is not in ${profile_desc} after loading ${tarball} (kubernetes/minikube#23471)" >&2
   exit 1
 fi
 
 # Print the list of images in the profile that match the expected repository
-minikube image ls -p "${profile}" | grep -F "${expected_repo}"
+minikube image ls "${profile_args[@]}" | grep -F "${expected_repo}"
